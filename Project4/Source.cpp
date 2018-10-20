@@ -4,6 +4,7 @@
 #include <string>
 #include <ctime>
 #include <fstream>
+#include <stdlib.h>
 
 // Для корректной работы freeaddrinfo в MinGW
 // Подробнее: http://stackoverflow.com/a/20306451
@@ -27,6 +28,26 @@ struct message {
 };
 
 void print_list_console(message* head);
+
+
+int Numeral(const char*num) {
+	return static_cast<const int>(strtol(num, NULL, 16));
+}
+
+string to_norm_string(string base) {
+	for (int i = 0; i < base.length() - 2; ++i) {
+		if (base[i] == '%') {//itoa(value, hexString, 16);
+			char temp[3]{ base[i + 1] , base[i + 2], '\0' };
+			char symbol;
+			symbol = Numeral(temp);
+			base.erase(i + 1, 2);
+			base[i] = symbol;
+			return to_norm_string(base);
+		}
+	}
+	return base;
+}
+
 
 string replace(string gde, char chto, char na_chto) {
 	for (int i = 0; i < gde.length(); ++i) {
@@ -169,7 +190,7 @@ int main()
 	}
 
 
-	const int max_client_buffer_size = 16384;
+	const int max_client_buffer_size = 30000;
 	char buf[max_client_buffer_size];
 	int client_socket = INVALID_SOCKET;
 	setlocale(LC_ALL, "rus");
@@ -220,16 +241,19 @@ int main()
 			int message_index = request.find("message");
 			string username_request;
 			string message_request;
-			if (username_index != -1 && message_index != -1) {
-				username_request = replace(request.substr(username_index + 9, message_index - username_index - 10), '+', ' ');
-				message_request = replace(request.substr(message_index + 8), '+', ' ');
-				if (message_request == "%2Fclear")
-					message_list = clear(message_list);
-				else
+			try {
+				if (username_index != -1 && message_index != -1) {
+					username_request = replace(to_norm_string(request.substr(username_index + 9, message_index - username_index - 10)),'+',' ');
+					message_request = replace(to_norm_string(request.substr(message_index + 8)), '+', ' ');
+					if (message_request == "/cheburek")
+						message_list = clear(message_list);
+					else
 					if (message_request != "") {
 						message_list = add_message(message_list, message_request, username_request);
 					}
+				}
 			}
+			catch (...) {}
 
 			// Данные успешно получены
 			// формируем тело ответа (HTML)
@@ -251,7 +275,7 @@ int main()
 				<< "<input type=\"submit\" class=\"btn btn - primary\" value=\"Send message\"><br>\n"
 				<< "</form><br>\n"
 				<< "<div id=\"chat\"><br>\n"
-				<< "<script>$(\"#chat\").html(decodeURI(\'"+print_list_browser(message_list)+"\'));</script>"
+				<< print_list_browser(message_list)
 				<< "</div><br>\n"
 				<< "</body>\n"
 				<< "</html>";
