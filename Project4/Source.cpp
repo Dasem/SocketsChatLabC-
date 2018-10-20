@@ -49,14 +49,14 @@ string leveling(string gde) {
 void print_list_console(message* head) {
 
 	for (message* iterator = head; iterator != NULL; iterator = iterator->next) {
-		cout << iterator->time << " " << iterator->user << " --> " << iterator->inf << "...\n";
+		cout << iterator->time << " " << iterator->user << " --> " << iterator->inf << "\n";
 	}
 }
 
 string print_list_browser(message* head) {
 	string res = "";
 	for (message* iterator = head; iterator != NULL; iterator = iterator->next) {
-		res += iterator->time + " <strong>" + iterator->user + "</strong> --> " + iterator->inf + "...<br>";
+		res += iterator->time + " <strong>" + iterator->user + "</strong> --> " + iterator->inf + "<br>";
 	}
 	return res;
 }
@@ -169,10 +169,10 @@ int main()
 	}
 
 
-	const int max_client_buffer_size = 1024;
+	const int max_client_buffer_size = 16384;
 	char buf[max_client_buffer_size];
 	int client_socket = INVALID_SOCKET;
-
+	setlocale(LC_ALL, "rus");
 
 	ifstream fl1("G:\\ajax1.html");
 	string request_body1 = "";
@@ -240,12 +240,18 @@ int main()
 				response_body
 				<< request_body1
 				<< "<form action=\"/\" method=\"POST\">\n"
-				<< "<input type=\"text\" name=\"username\" value = \"" + username_request + "\"><br>\n"
-				<< "<input type=\"text\" name=\"message\"><br>\n"
-				<< "<input type=\"submit\" value=\"Send message\"><br>\n"
+				<< "<div class=\"form - group\">\n"
+				<< "<label>User name: </label>\n"
+				<< "<input type=\"text\" class=\"form - control\" name=\"username\" value = \"" + username_request + "\"><br>\n"
+				<< "</div>"
+				<< "<div class=\"form - group\">\n"
+				<< "<label>Message: </label>\n"
+				<< "<input type=\"text\" class=\"form - control\" name=\"message\" autofocus><br>\n"
+				<< "</div>"
+				<< "<input type=\"submit\" class=\"btn btn - primary\" value=\"Send message\"><br>\n"
 				<< "</form><br>\n"
 				<< "<div id=\"chat\"><br>\n"
-				<< print_list_browser(message_list)
+				<< "<script>$(\"#chat\").html(decodeURI(\'"+print_list_browser(message_list)+"\'));</script>"
 				<< "</div><br>\n"
 				<< "</body>\n"
 				<< "</html>";
@@ -271,7 +277,7 @@ int main()
 			closesocket(client_socket);
 		}
 		system("cls");
-		print_list_console(message_list);
+		//print_list_console(message_list);
 	}
 
 	// Убираем за собой
