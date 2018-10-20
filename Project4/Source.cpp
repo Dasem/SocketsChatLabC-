@@ -195,7 +195,7 @@ int main()
 	int client_socket = INVALID_SOCKET;
 	setlocale(LC_ALL, "rus");
 
-	ifstream fl1("G:\\ajax1.html");
+	ifstream fl1("ajax1.html");
 	string request_body1 = "";
 	char c;
 	c = fl1.get();
