@@ -1,7 +1,9 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <ctime>
+#include <fstream>
 
 // Для корректной работы freeaddrinfo в MinGW
 // Подробнее: http://stackoverflow.com/a/20306451
@@ -20,19 +22,43 @@ using namespace std;
 struct message {
 	string inf;
 	string user;
-	time_t time;
+	string time;
 	message* next;
 };
 
-message* add_message(message* head, string info, string user);
-message* clear(message* head);
 void print_list_console(message* head);
 
-void print_list_console(message* head) {
-	
-	for (message* iterator = head; iterator != NULL; iterator = iterator->next) {
-		cout << iterator->time <<" "<<iterator->user << " --> " << iterator->inf << "...\n";
+string replace(string gde, char chto, char na_chto) {
+	for (int i = 0; i < gde.length(); ++i) {
+		if (gde[i] == chto) {
+			gde[i] = na_chto;
+		}
 	}
+	return gde;
+}
+
+string leveling(string gde) {
+	for (int i = 0; i < gde.length(); ++i) {
+		if (gde[i] == '\n') {
+			gde.erase(i, 1);
+		}
+	}
+	return gde;
+}
+
+void print_list_console(message* head) {
+
+	for (message* iterator = head; iterator != NULL; iterator = iterator->next) {
+		cout << iterator->time << " " << iterator->user << " --> " << iterator->inf << "...\n";
+	}
+}
+
+string print_list_browser(message* head) {
+	string res = "";
+	for (message* iterator = head; iterator != NULL; iterator = iterator->next) {
+		res += iterator->time + " <strong>" + iterator->user + "</strong> --> " + iterator->inf + "...<br>";
+	}
+	return res;
 }
 
 message* clear(message* head) {
@@ -47,17 +73,27 @@ message* clear(message* head) {
 }
 
 message* add_message(message* head, string info, string user) {
-	message* new_message = (message*)malloc(sizeof(message));
+	message* new_message = new message();
 	new_message->inf = info;
 	new_message->user = user;
 	new_message->next = head;
-	new_message->time = time(0);
+	time_t date = time(NULL);
+	tm* datetime = localtime(&date);
+	new_message->time = leveling(asctime(datetime));
 	head = new_message;
 	return head;
 }
 
 int main()
 {
+	message* message_list = new message();
+	message_list->inf = "ZDAROVA POCHANY";
+	message_list->user = "SAM ZNAESH KTO";
+	message_list->next = NULL;
+	time_t date = time(NULL);
+	tm* datetime = localtime(&date);
+	message_list->time = leveling(asctime(datetime));
+
 	WSADATA wsaData; // служебная структура для хранение информации
 	// о реализации Windows Sockets
 	// старт использования библиотеки сокетов процессом
@@ -86,7 +122,7 @@ int main()
 
 	// Инициализируем структуру, хранящую адрес сокета - addr
 	// Наш HTTP-сервер будет висеть на 8000-м порту локалхоста
-	result = getaddrinfo("127.0.0.1", "8000", &hints, &addr);
+	result = getaddrinfo("192.168.1.5", "80", &hints, &addr);
 
 	// Если инициализация структуры адреса завершилась с ошибкой,
 	// выведем сообщением об этом и завершим выполнение программы
@@ -137,6 +173,18 @@ int main()
 	char buf[max_client_buffer_size];
 	int client_socket = INVALID_SOCKET;
 
+
+	ifstream fl1("G:\\ajax1.html");
+	string request_body1 = "";
+	char c;
+	c = fl1.get();
+	while (c != EOF)
+	{
+		request_body1 += c;
+		//cout1 << c;
+		c = fl1.get();
+	}
+
 	for (;;) {
 		// Принимаем входящие соединения
 		client_socket = accept(listen_socket, NULL, NULL);
@@ -166,18 +214,45 @@ int main()
 			// В буфере запроса.
 			buf[result] = '\0';
 
+			//Принятие и формирование сообщения
+			string request = buf;
+			int username_index = request.find("username");
+			int message_index = request.find("message");
+			string username_request;
+			string message_request;
+			if (username_index != -1 && message_index != -1) {
+				username_request = replace(request.substr(username_index + 9, message_index - username_index - 10), '+', ' ');
+				message_request = replace(request.substr(message_index + 8), '+', ' ');
+				if (message_request == "%2Fclear")
+					message_list = clear(message_list);
+				else
+					if (message_request != "") {
+						message_list = add_message(message_list, message_request, username_request);
+					}
+			}
+
 			// Данные успешно получены
 			// формируем тело ответа (HTML)
-			response_body
-				<< "<form action=\"/\" method=\"POST\">"
-				<< "<input type=\"text\" name=\"username\"><br>"
-				<< "<input type=\"text\" name=\"message\"><br>"
-				<< "<input type=\"submit\" value=\"Send message\"><br>"
-				<< "</form><br>"
-				<< buf;
+
+			if (request.substr(0, 9) == "GET /ajax")
+				response_body << print_list_browser(message_list);
+			else
+				response_body
+				<< request_body1
+				<< "<form action=\"/\" method=\"POST\">\n"
+				<< "<input type=\"text\" name=\"username\" value = \"" + username_request + "\"><br>\n"
+				<< "<input type=\"text\" name=\"message\"><br>\n"
+				<< "<input type=\"submit\" value=\"Send message\"><br>\n"
+				<< "</form><br>\n"
+				<< "<div id=\"chat\"><br>\n"
+				<< print_list_browser(message_list)
+				<< "</div><br>\n"
+				<< "</body>\n"
+				<< "</html>";
 
 			// Формируем весь ответ вместе с заголовками
-			response << "HTTP/1.1 200 OK\r\n"
+			response
+				<< "HTTP/1.1 200 OK\r\n"
 				<< "Version: HTTP/1.1\r\n"
 				<< "Content-Type: text/html; charset=utf-8\r\n"
 				<< "Content-Length: " << response_body.str().length()
@@ -195,6 +270,8 @@ int main()
 			// Закрываем соединение к клиентом
 			closesocket(client_socket);
 		}
+		system("cls");
+		print_list_console(message_list);
 	}
 
 	// Убираем за собой
